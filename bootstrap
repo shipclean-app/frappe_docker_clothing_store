@@ -1,0 +1,364 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_NAME="${BOOTSTRAP_PROJECT_NAME:-${COMPOSE_PROJECT_NAME:-$(basename "$ROOT_DIR")}}"
+ENV_FILE="${BOOTSTRAP_ENV_FILE:-$ROOT_DIR/custom.env}"
+ENV_EXAMPLE="$ROOT_DIR/custom.env.example"
+APPS_FILE="${BOOTSTRAP_APPS_FILE:-$ROOT_DIR/apps.json}"
+APPS_EXAMPLE="$ROOT_DIR/apps.json.example"
+RENDERED_COMPOSE="${BOOTSTRAP_RENDERED_COMPOSE:-$ROOT_DIR/compose.custom.yaml}"
+
+COMPOSE_STACK_FILES=(
+  "$ROOT_DIR/compose.yaml"
+  "$ROOT_DIR/overrides/compose.mariadb.yaml"
+  "$ROOT_DIR/overrides/compose.redis.yaml"
+  "$ROOT_DIR/overrides/compose.noproxy.yaml"
+  "$ROOT_DIR/overrides/compose.migrator.yaml"
+)
+
+log() {
+  printf '[bootstrap] %s\n' "$*"
+}
+
+die() {
+  printf '[bootstrap] ERROR: %s\n' "$*" >&2
+  exit 1
+}
+
+ensure_command() {
+  command -v "$1" >/dev/null 2>&1 || die "commande introuvable: $1"
+}
+
+load_env() {
+  if [ -f "$ENV_FILE" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    . "$ENV_FILE"
+    set +a
+  fi
+}
+
+ensure_env_file() {
+  if [ ! -f "$ENV_FILE" ]; then
+    cp "$ENV_EXAMPLE" "$ENV_FILE"
+    log "custom.env absent: copie creee depuis custom.env.example"
+  fi
+}
+
+ensure_apps_file() {
+  [ -f "$APPS_FILE" ] || die "apps.json absent. Lance './bootstrap init' puis adapte apps.json."
+}
+
+prepare_apps_secret() {
+  ensure_command python
+  ensure_apps_file
+
+  local token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+  local temp_apps
+  temp_apps="$(mktemp)"
+
+  python - "$APPS_FILE" "$temp_apps" "$token" <<'PY'
+import json
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1])
+target = pathlib.Path(sys.argv[2])
+token = sys.argv[3]
+
+apps = json.loads(source.read_text())
+
+if token:
+    for app in apps:
+        url = app.get("url")
+        if not isinstance(url, str):
+            continue
+        if url.startswith("https://github.com/") and "@" not in url:
+            app["url"] = url.replace(
+                "https://github.com/",
+                f"https://x-access-token:{token}@github.com/",
+                1,
+            )
+
+target.write_text(json.dumps(apps, indent=2) + "\n")
+PY
+
+  printf '%s\n' "$temp_apps"
+}
+
+compute_apps_cache_bust() {
+  ensure_command python
+  ensure_command git
+
+  local resolved_apps="$1"
+  local fingerprint
+  fingerprint="$(sha256sum "$resolved_apps" | awk '{print $1}')"
+
+  while IFS=$'\t' read -r url branch; do
+    [ -n "$url" ] || continue
+    [ -n "$branch" ] || continue
+
+    local remote_sha=""
+    remote_sha="$(git ls-remote "$url" "refs/heads/$branch" 2>/dev/null | awk 'NR==1 {print $1}')"
+    if [ -n "$remote_sha" ]; then
+      fingerprint="${fingerprint}:${remote_sha}"
+    else
+      fingerprint="${fingerprint}:${branch}"
+    fi
+  done < <(
+    python - "$resolved_apps" <<'PY'
+import json
+import pathlib
+import sys
+
+apps = json.loads(pathlib.Path(sys.argv[1]).read_text())
+for app in apps:
+    url = app.get("url", "")
+    branch = app.get("branch", "")
+    print(f"{url}\t{branch}")
+PY
+  )
+
+  printf '%s' "$fingerprint" | sha256sum | awk '{print $1}'
+}
+
+compose_stack() {
+  ensure_command docker
+  ensure_env_file
+
+  local args=(
+    compose
+    --project-name "$PROJECT_NAME"
+    --env-file "$ENV_FILE"
+  )
+
+  local file
+  for file in "${COMPOSE_STACK_FILES[@]}"; do
+    args+=(-f "$file")
+  done
+
+  docker "${args[@]}" "$@"
+}
+
+print_help() {
+  cat <<'EOF'
+Usage:
+  ./bootstrap <commande> [options]
+
+Commandes principales:
+  init                     Cree custom.env et apps.json a partir des exemples
+  render                   Genere compose.custom.yaml
+  start                    Demarre la stack ERPNext
+  stop                     Arrete proprement les conteneurs
+  restart                  Redemarre la stack
+  status                   Affiche l'etat des conteneurs
+  logs [service]           Suit les logs
+  clean                    Supprime conteneurs, reseau et orphelins
+  wipe --yes               Reset complet avec suppression des volumes Docker
+  build                    Construit l'image custom depuis apps.json
+
+Commandes site:
+  site-create <site> [admin_password]
+                           Cree un site et installe ERPNext
+  site-install-app <site> <app>
+                           Installe une app presente dans l'image
+  export-fixtures <site>   Exporte les fixtures du site
+  migrate [site|all]       Lance bench migrate
+  backup [site|all]        Lance bench backup --with-files
+  shell                    Ouvre un bash dans le conteneur backend
+  exec <commande...>       Execute une commande bench/libre dans backend
+
+Notes:
+  - 'clean' conserve les volumes.
+  - 'wipe --yes' supprime les volumes et efface les donnees locales du projet Docker.
+  - Par defaut, le projet Docker utilise le nom du dossier courant.
+EOF
+}
+
+cmd_init() {
+  if [ -f "$ENV_FILE" ]; then
+    log "custom.env existe deja"
+  else
+    cp "$ENV_EXAMPLE" "$ENV_FILE"
+    log "custom.env cree depuis custom.env.example"
+  fi
+
+  if [ -f "$APPS_FILE" ]; then
+    log "apps.json existe deja"
+  else
+    cp "$APPS_EXAMPLE" "$APPS_FILE"
+    log "apps.json cree depuis apps.json.example"
+  fi
+
+  log "Pense a mettre a jour apps.json avec le vrai depot boutique_custom avant build"
+}
+
+cmd_render() {
+  ensure_env_file
+  compose_stack config > "$RENDERED_COMPOSE"
+  log "compose rendu genere: $RENDERED_COMPOSE"
+}
+
+cmd_start() {
+  cmd_render
+  compose_stack up -d
+  compose_stack ps
+}
+
+cmd_stop() {
+  compose_stack stop
+}
+
+cmd_restart() {
+  cmd_stop
+  cmd_start
+}
+
+cmd_status() {
+  compose_stack ps
+}
+
+cmd_logs() {
+  if [ "${1:-}" != "" ]; then
+    compose_stack logs -f --tail=100 "$1"
+  else
+    compose_stack logs -f --tail=100
+  fi
+}
+
+cmd_clean() {
+  compose_stack down --remove-orphans
+  log "Stack nettoyee. Les volumes ont ete conserves."
+}
+
+cmd_wipe() {
+  if [ "${1:-}" != "--yes" ]; then
+    die "wipe est destructif. Utilise './bootstrap wipe --yes' pour supprimer aussi les volumes."
+  fi
+  compose_stack down --remove-orphans --volumes
+  log "Stack et volumes supprimes."
+}
+
+cmd_build() {
+  ensure_command docker
+  ensure_command sha256sum
+  ensure_env_file
+  ensure_apps_file
+  load_env
+
+  local image="${CUSTOM_IMAGE:-custom}"
+  local tag="${CUSTOM_TAG:-16}"
+  local resolved_apps
+  local cache_bust
+  resolved_apps="$(prepare_apps_secret)"
+  cache_bust="$(compute_apps_cache_bust "$resolved_apps")"
+
+  if [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]; then
+    log "apps.json sera resolu temporairement avec le token GitHub actif pour les URLs github.com"
+  else
+    log "Aucun GH_TOKEN/GITHUB_TOKEN detecte: apps.json sera utilise tel quel"
+  fi
+
+  local build_status=0
+  if ! docker build \
+    --build-arg=FRAPPE_PATH=https://github.com/frappe/frappe \
+    --build-arg=FRAPPE_BRANCH=version-16 \
+    --build-arg=CACHE_BUST="$cache_bust" \
+    --secret=id=apps_json,src="$resolved_apps" \
+    --tag="${image}:${tag}" \
+    --file="$ROOT_DIR/images/layered/Containerfile" \
+    "$ROOT_DIR"; then
+    build_status=$?
+  fi
+
+  rm -f "$resolved_apps"
+
+  if [ "$build_status" -ne 0 ]; then
+    return "$build_status"
+  fi
+
+  log "Image construite: ${image}:${tag}"
+  log "Si besoin, active CUSTOM_IMAGE/CUSTOM_TAG dans custom.env pour utiliser cette image au demarrage."
+}
+
+cmd_site_create() {
+  local site="${1:-}"
+  local admin_password="${2:-admin}"
+  [ -n "$site" ] || die "usage: ./bootstrap site-create <site> [admin_password]"
+
+  ensure_env_file
+  load_env
+  : "${DB_PASSWORD:=changeit}"
+
+  compose_stack exec backend bench new-site "$site" \
+    --mariadb-user-host-login-scope=% \
+    --db-root-password "$DB_PASSWORD" \
+    --admin-password "$admin_password" \
+    --install-app erpnext
+}
+
+cmd_site_install_app() {
+  local site="${1:-}"
+  local app="${2:-}"
+  [ -n "$site" ] || die "usage: ./bootstrap site-install-app <site> <app>"
+  [ -n "$app" ] || die "usage: ./bootstrap site-install-app <site> <app>"
+
+  compose_stack exec backend bench --site "$site" install-app "$app"
+}
+
+cmd_export_fixtures() {
+  local site="${1:-}"
+  [ -n "$site" ] || die "usage: ./bootstrap export-fixtures <site>"
+
+  compose_stack exec backend bench --site "$site" export-fixtures
+}
+
+cmd_migrate() {
+  local site="${1:-all}"
+  compose_stack exec backend bench --site "$site" migrate
+}
+
+cmd_backup() {
+  local site="${1:-all}"
+  compose_stack exec backend bench --site "$site" backup --with-files
+}
+
+cmd_shell() {
+  compose_stack exec backend bash
+}
+
+cmd_exec() {
+  [ "$#" -gt 0 ] || die "usage: ./bootstrap exec <commande...>"
+  compose_stack exec backend "$@"
+}
+
+main() {
+  local cmd="${1:-help}"
+  shift || true
+
+  case "$cmd" in
+    init) cmd_init "$@" ;;
+    render) cmd_render "$@" ;;
+    start) cmd_start "$@" ;;
+    stop) cmd_stop "$@" ;;
+    restart) cmd_restart "$@" ;;
+    status) cmd_status "$@" ;;
+    logs) cmd_logs "$@" ;;
+    clean) cmd_clean "$@" ;;
+    wipe) cmd_wipe "$@" ;;
+    build) cmd_build "$@" ;;
+    site-create) cmd_site_create "$@" ;;
+    site-install-app) cmd_site_install_app "$@" ;;
+    export-fixtures) cmd_export_fixtures "$@" ;;
+    migrate) cmd_migrate "$@" ;;
+    backup) cmd_backup "$@" ;;
+    shell) cmd_shell "$@" ;;
+    exec) cmd_exec "$@" ;;
+    help|-h|--help) print_help ;;
+    *) die "commande inconnue: $cmd. Lance './bootstrap help'." ;;
+  esac
+}
+
+main "$@"

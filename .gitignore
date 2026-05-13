@@ -1,5 +1,8 @@
 # Environment Variables
 .env
+custom.env
+apps.json
+compose.custom.yaml
 
 # mounted volume
 sites
