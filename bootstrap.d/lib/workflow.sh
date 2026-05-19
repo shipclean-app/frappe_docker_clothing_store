@@ -86,17 +86,39 @@ workflow_pause() {
   shift
   local url="${1:-}"
   shift || true
+  local -a checklist=()
+  local -a link_lines=()
+  while [ "$#" -gt 0 ]; do
+    if [[ "$1" == *$'\t'* ]]; then
+      link_lines+=("$1")
+    else
+      checklist+=("$1")
+    fi
+    shift
+  done
   printf '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
   printf '  ETAPE MANUELLE : %s\n' "$title"
   printf '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
-  [ -n "$url" ] && printf '  URL      : %s\n' "$url"
+  if [ "${#link_lines[@]}" -gt 0 ]; then
+    printf '\n  Liens ERPNext (copier-coller) :\n'
+    local item label link_url
+    for item in "${link_lines[@]}"; do
+      label="${item%%$'\t'*}"
+      link_url="${item#*$'\t'}"
+      printf '    • %s\n      %s\n' "$label" "$link_url"
+    done
+  elif [ -n "$url" ]; then
+    printf '  URL      : %s\n' "$url"
+  fi
   printf '  Site     : %s\n' "$WF_SITE"
   printf '  Admin    : %s\n' "$WF_ADMIN_PASSWORD"
   workflow_codespaces_hint
-  while [ "$#" -gt 0 ]; do
-    printf '  - %s\n' "$1"
-    shift
-  done
+  if [ "${#checklist[@]}" -gt 0 ]; then
+    printf '\n  Checklist :\n'
+    for item in "${checklist[@]}"; do
+      printf '  - %s\n' "$item"
+    done
+  fi
   if [ "$WF_NON_INTERACTIVE" -eq 1 ]; then
     log "[non-interactif] pause « ${title} » — poursuite automatique"
     return 0
@@ -135,12 +157,18 @@ workflow_expand_workflow() {
   local wf_file="${WF_WORKFLOWS_DIR}/${name}.yaml"
   [ -f "$wf_file" ] || die "workflow introuvable: ${name} (${wf_file})"
 
+  local base
+  base="$(workflow_resolve_url)"
   local parse_args=(
     "site=${WF_SITE}"
     "admin_password=${WF_ADMIN_PASSWORD}"
     "warehouse=${WF_WAREHOUSE}"
-    "base_url=$(workflow_resolve_url)"
-    "pos_url=$(workflow_resolve_url)/app/point-of-sale"
+    "pos_profile=${WF_POS_PROFILE}"
+    "base_url=${base}"
+    "pos_url=${base}/app/point-of-sale"
+    "sales_tax_list_url=${base}/app/sales-taxes-and-charges-template"
+    "sales_tax_new_url=${base}/app/sales-taxes-and-charges-template/new-sales-taxes-and-charges-template"
+    "pos_profile_url=${base}/app/pos-profile/${WF_POS_PROFILE}"
     "translation_report=${ROOT_DIR}/project/boutique_retail/reports/translation-gaps-retail-fr.csv"
     "glossaire=${ROOT_DIR}/project/boutique_retail/glossaire_traduction_fr.md"
   )
@@ -351,8 +379,20 @@ for a in json.load(sys.stdin).get('args') or []:
     pause)
       local title url
       title="$(python3 -c "import json,sys; print(json.load(sys.stdin).get('title','Pause'))" <<<"$step_json")"
-      url="$(python3 -c "import json,sys; print(json.load(sys.stdin).get('url') or json.load(sys.stdin).get('urls',{}).get('local',''))" <<<"$step_json" 2>/dev/null || workflow_resolve_url)"
+      url="$(python3 -c "
+import json,sys
+s=json.load(sys.stdin)
+print(s.get('url') or (s.get('urls') or {}).get('local') or '')
+" <<<"$step_json")"
       [ -z "$url" ] && url="$(workflow_resolve_url)"
+      mapfile -t pause_links < <(python3 -c "
+import json,sys
+for link in json.load(sys.stdin).get('links') or []:
+    label=(link.get('label') or '').strip()
+    u=(link.get('url') or '').strip()
+    if label and u:
+        print(label + chr(9) + u)
+" <<<"$step_json")
       mapfile -t checklist < <(python3 -c "
 import json,sys
 for line in json.load(sys.stdin).get('checklist') or []:
@@ -363,7 +403,7 @@ for line in json.load(sys.stdin).get('checklist') or []:
         return 0
       fi
       workflow_save_state "$WF_CURRENT_WORKFLOW" "$step_id" "$idx" "$(workflow_step_count)"
-      workflow_pause "$title" "$url" "${checklist[@]}"
+      workflow_pause "$title" "$url" "${pause_links[@]}" "${checklist[@]}"
       local va_spec va_retries va_delay
       va_spec="$(python3 -c "
 import json,sys

@@ -137,16 +137,22 @@ Exemples :
 
 ### Checklist taxes (manuel — avant test POS)
 
-Le script ne configure pas la TVA (trop dépendant du régime fiscal).
+Le script ne configure pas la TVA (trop dépendant du régime fiscal). À l’étape `pause_taxes`, le workflow affiche les **URLs exactes** (port `8080` par défaut) :
 
-1. **Comptabilité** → modèle de **taxes de vente** (TVA France)
-2. Lier le modèle au **Profil point de vente** (`Boutique`)
+| Action | URL |
+|--------|-----|
+| Liste des modèles de taxes de vente | `http://localhost:8080/app/sales-taxes-and-charges-template` |
+| Nouveau modèle (TVA France) | `http://localhost:8080/app/sales-taxes-and-charges-template/new-sales-taxes-and-charges-template` |
+| Profil POS Boutique (lier le modèle) | `http://localhost:8080/app/pos-profile/Boutique` |
+
+1. Créer ou ouvrir un modèle de **taxes de vente** (TVA France, ex. 20 %)
+2. Dans le profil POS **Boutique**, lier ce modèle (onglet Taxes et facturation)
 3. Faire une **vente test** : la TVA sur le ticket doit être correcte
 
 ### Ouvrir la caisse
 
-- Menu : **Ventes → POS → POS**
-- URL directe : http://localhost:8080/app/point-of-sale
+- Caisse POS : `http://localhost:8080/app/point-of-sale`
+- Profil POS : `http://localhost:8080/app/pos-profile/Boutique`
 
 Puis enchaîner avec [`recette_terrain.md`](recette_terrain.md).
 

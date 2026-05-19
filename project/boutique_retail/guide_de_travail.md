@@ -107,8 +107,10 @@ Puis navigateur : wizard (FR, France, **sans** donnees demo) → `./bootstrap se
 
 ### Checklist taxes (post-wizard, manuel)
 
+Le workflow `pause_taxes` affiche les URLs ERPNext (liste / nouveau modele / profil POS Boutique). Voir aussi [`parcours_reset_config_traduction.md`](parcours_reset_config_traduction.md).
+
 1. Modele de taxes de vente (TVA).
-2. Lier au **POS Profile**.
+2. Lier au **POS Profile** `Boutique`.
 3. Vente test : TVA correcte sur le ticket.
 
 ### Combo L — Traductions

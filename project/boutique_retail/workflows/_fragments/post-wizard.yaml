@@ -9,16 +9,28 @@ steps:
   - id: pause_taxes
     type: pause
     title: Configuration taxes (manuel)
-    url: "${base_url}"
+    url: "${sales_tax_list_url}"
+    links:
+      - label: "Modeles de taxes de vente (liste)"
+        url: "${sales_tax_list_url}"
+      - label: "Nouveau modele TVA France"
+        url: "${sales_tax_new_url}"
+      - label: "Profil POS Boutique — onglet Taxes et facturation"
+        url: "${pos_profile_url}"
     checklist:
-      - "Comptabilite → modele de taxes de vente (TVA France)"
-      - "Lier le modele au Profil point de vente (Boutique)"
+      - "Creer ou ouvrir un modele de taxes de vente (TVA France, ex. 20 %)"
+      - "Dans le profil POS Boutique, lier ce modele (Taxes et facturation)"
       - "Vente test : TVA correcte sur le ticket"
 
   - id: pause_pos
     type: pause
     title: Test caisse POS
     url: "${pos_url}"
+    links:
+      - label: "Caisse POS (Point of Sale)"
+        url: "${pos_url}"
+      - label: "Profil POS Boutique"
+        url: "${pos_profile_url}"
     checklist:
-      - "Menu Ventes → POS → POS"
-      - "Verifier vente test avec stock et paiements"
+      - "Ouvrir la caisse et faire une vente test (stock + paiements)"
+      - "Verifier que la TVA du ticket correspond au modele lie"

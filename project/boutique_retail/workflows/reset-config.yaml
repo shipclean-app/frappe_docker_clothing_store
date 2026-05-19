@@ -10,6 +10,10 @@ variables:
   warehouse: "Boutique"
   base_url: "http://localhost:${HTTP_PUBLISH_PORT:-8080}"
   pos_url: "http://localhost:${HTTP_PUBLISH_PORT:-8080}/app/point-of-sale"
+  pos_profile: "Boutique"
+  sales_tax_list_url: "${base_url}/app/sales-taxes-and-charges-template"
+  sales_tax_new_url: "${base_url}/app/sales-taxes-and-charges-template/new-sales-taxes-and-charges-template"
+  pos_profile_url: "${base_url}/app/pos-profile/${pos_profile}"
 includes:
   - _fragments/init-build.yaml
   - _fragments/reset-wipe.yaml
