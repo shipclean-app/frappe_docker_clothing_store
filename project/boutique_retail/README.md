@@ -12,7 +12,7 @@ Ce dossier transforme le cadrage en livrables directement utilisables pour une v
 
 ## Ordre d'utilisation
 
-1. Lire `guide_de_travail.md` et suivre l'ordre de travail.
+1. Lire `guide_de_travail.md` (section **Parcours bootstrap** pour les combos A–L).
 2. Lire ce fichier et valider les decisions par defaut.
 3. Configurer le catalogue avec `catalogue_et_variantes.md`.
 4. Faire la recette avec `recette_terrain.md`.

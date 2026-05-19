@@ -75,9 +75,23 @@ The full `frappe_docker` documentation is available in [`docs/`](docs/) and publ
 
 > For Docker basics and best practices refer to Docker's [documentation](http://docs.docker.com)
 
+## Boutique retail (ce depot)
+
+Ce clone sert au projet **boutique pret-a-porter** (ERPNext + app `boutique_custom`). Utiliser **`./bootstrap`**, pas `pwd.yml`.
+
+| Parcours | Commande rapide |
+|----------|-----------------|
+| Premier install | Voir [guide de travail](project/boutique_retail/guide_de_travail.md) combo **A** |
+| Quotidien | `./bootstrap start` |
+| Reset complet | combo **C** dans le guide |
+
+Kit retail : [`project/boutique_retail/`](project/boutique_retail/).
+
 ## Demo setup
 
 The fastest way to try Frappe locally is with the single-file demo setup in `pwd.yml`.
+
+> **Note :** `pwd.yml` est un demo generique Frappe, pas le workflow boutique ci-dessus.
 
 ### Try on your environment
 

@@ -57,8 +57,62 @@ Les commandes utiles sont:
 ./bootstrap export-fixtures <site>
 ./bootstrap backup [site|all]
 ./bootstrap migrate [site|all]
+./bootstrap setup-boutique <site> [--with-catalog] [--dry-run] [--force]
+./bootstrap translation-audit [--priority retail]
+./bootstrap translation-import <site> <csv>
 ./bootstrap shell
 ./bootstrap exec <commande...>
+```
+
+## 2 bis. Parcours bootstrap par cas d'usage
+
+Chaque parcours est un **combo** de commandes dans l'ordre. Variables par defaut : site `boutique.local`, port `8080`, admin `admin`.
+
+| ID | Cas | Quand | Combo terminal | UI ERPNext |
+|----|-----|-------|----------------|------------|
+| A | Premiere installation | Clone neuf | `init` → editer `apps.json` / `custom.env` → `build` → `start` → `site-create` → `site-install-app` → `migrate` | Wizard FR, sans demo → `setup-boutique` |
+| B | Journee de travail | Stack prete | `start` → travail → `stop` (optionnel) | Desk / POS |
+| C | Reset complet | Repartir a zero | `backup`? → `wipe --yes` → `start` → `site-create` → `site-install-app` → `migrate` | Wizard → `setup-boutique` |
+| D | Redemarrage stack | Crash / `.env` | `restart` ou `stop` + `start` | — |
+| E | Site existant | Volumes OK | `start` → `migrate` si besoin | Reprendre config |
+| F | MAJ app custom | Nouveau commit `boutique_custom` | `build` → `restart` → `site-install-app` → `migrate` | Verifier ecrans |
+| G | Export customisations | Lot UI valide | `export-fixtures` → commit `boutique_custom` → `build` → `restart` | — |
+| H | Sauvegarde | Avant reset | `backup boutique.local` | — |
+| I | Depannage | Erreur migrate | `status` → `logs backend` → `migrate` → `restart` | — |
+| K | Catalogue test rapide | Apres wizard | `setup-boutique <site> --with-catalog` | `/app/point-of-sale` |
+| L | Traductions boutique | FR retail | `translation-audit` → relecture CSV → `translation-import` → `export-fixtures` | Desk FR |
+
+`clean` supprime les conteneurs **sans** les volumes. `wipe --yes` supprime **aussi** la base et le site.
+
+### Combo C — Reset complet
+
+**Efface :** volumes Docker (DB + site). **Conserve :** `custom.env`, `apps.json`, image locale.
+
+```bash
+./bootstrap backup boutique.local
+./bootstrap wipe --yes
+./bootstrap start
+./bootstrap site-create boutique.local admin
+./bootstrap site-install-app boutique.local boutique_custom
+./bootstrap migrate boutique.local
+```
+
+Puis navigateur : wizard (FR, France, **sans** donnees demo) → `./bootstrap setup-boutique boutique.local` → checklist taxes → [`recette_terrain.md`](recette_terrain.md).
+
+### Checklist taxes (post-wizard, manuel)
+
+1. Modele de taxes de vente (TVA).
+2. Lier au **POS Profile**.
+3. Vente test : TVA correcte sur le ticket.
+
+### Combo L — Traductions
+
+```bash
+./bootstrap translation-audit --priority retail
+# Revoir project/boutique_retail/reports/translation-gaps-retail-fr.csv
+# Completer translated_text (voir glossaire_traduction_fr.md)
+./bootstrap translation-import boutique.local project/boutique_retail/reports/translation-p0-reviewed.csv
+./bootstrap export-fixtures boutique.local
 ```
 
 ## 3. Phase 0 - nettoyage initial
@@ -326,12 +380,19 @@ Une fois le site accessible, les actions suivantes se font dans l'interface ERPN
 
 #### Parametrage standard
 
-- societe
-- taxes
-- entrepot `Boutique` et eventuellement `Reserve`
-- modes de paiement
-- POS Profile
-- roles de base
+Apres le wizard ERPNext :
+
+```bash
+./bootstrap setup-boutique boutique.local
+# optionnel : --with-catalog pour article test
+```
+
+Puis manuellement :
+
+- taxes (checklist section 2 bis)
+- roles de base si besoin
+
+Le script couvre : langue FR, comptes stock SYSCOHADA, entrepot `Boutique`, modes de paiement, client Walk-in, POS Profile.
 
 #### Catalogue et variantes
 

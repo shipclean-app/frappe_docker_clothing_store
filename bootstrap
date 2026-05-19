@@ -167,6 +167,10 @@ Commandes site:
   export-fixtures <site>   Exporte les fixtures du site
   migrate [site|all]       Lance bench migrate
   backup [site|all]        Lance bench backup --with-files
+  setup-boutique <site>    Semis config boutique (post-wizard)
+  translation-audit        Rapport traductions FR manquantes (retail)
+  translation-import <site> <csv>
+                           Importe des traductions depuis un CSV revu
   shell                    Ouvre un bash dans le conteneur backend
   exec <commande...>       Execute une commande bench/libre dans backend
 
@@ -174,6 +178,7 @@ Notes:
   - 'clean' conserve les volumes.
   - 'wipe --yes' supprime les volumes et efface les donnees locales du projet Docker.
   - Par defaut, le projet Docker utilise le nom du dossier courant.
+  - Parcours complets: project/boutique_retail/guide_de_travail.md (section Parcours bootstrap)
 EOF
 }
 
@@ -334,6 +339,95 @@ cmd_exec() {
   compose_stack exec backend "$@"
 }
 
+cmd_setup_boutique() {
+  local site="${1:-}"
+  shift || true
+  [ -n "$site" ] || die "usage: ./bootstrap setup-boutique <site> [--company NAME] [--warehouse NAME] [--with-catalog] [--dry-run] [--force]"
+
+  local company="" warehouse="Boutique" with_catalog=0 dry_run=0 force=0
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --company)
+        company="${2:-}"
+        shift 2
+        ;;
+      --warehouse)
+        warehouse="${2:-}"
+        shift 2
+        ;;
+      --with-catalog)
+        with_catalog=1
+        shift
+        ;;
+      --dry-run)
+        dry_run=1
+        shift
+        ;;
+      --force)
+        force=1
+        shift
+        ;;
+      *)
+        die "option inconnue: $1"
+        ;;
+    esac
+  done
+
+  local kwargs="{\"warehouse\": \"${warehouse}\", \"with_catalog\": ${with_catalog}, \"dry_run\": ${dry_run}, \"force\": ${force}"
+  if [ -n "$company" ]; then
+    kwargs="{\"company\": \"${company}\", \"warehouse\": \"${warehouse}\", \"with_catalog\": ${with_catalog}, \"dry_run\": ${dry_run}, \"force\": ${force}"
+  fi
+  kwargs="${kwargs}}"
+
+  log "setup-boutique site=${site} warehouse=${warehouse}"
+  compose_stack exec backend bench --site "$site" execute \
+    boutique_custom.setup.seed_boutique.run --kwargs "$kwargs"
+}
+
+cmd_translation_audit() {
+  local priority="retail"
+  local output="$ROOT_DIR/project/boutique_retail/reports/translation-gaps-retail-fr.csv"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --priority)
+        priority="${2:-retail}"
+        shift 2
+        ;;
+      --output)
+        output="${2:-}"
+        shift 2
+        ;;
+      *)
+        die "usage: ./bootstrap translation-audit [--priority P0|P1|P2|retail|all] [--output path.csv]"
+        ;;
+    esac
+  done
+
+  mkdir -p "$(dirname "$output")"
+  local audit_script="$ROOT_DIR/project/boutique_retail/tools/translation_audit.py"
+  [ -f "$audit_script" ] || die "script introuvable: $audit_script"
+
+  log "translation-audit priority=${priority} -> ${output}"
+  compose_stack exec -T backend python3 - --priority "$priority" --output "/tmp/translation-gaps-retail-fr.csv" \
+    < "$audit_script"
+  compose_stack cp "backend:/tmp/translation-gaps-retail-fr.csv" "$output"
+  log "rapport ecrit: $output"
+}
+
+cmd_translation_import() {
+  local site="${1:-}"
+  local csv="${2:-}"
+  [ -n "$site" ] || die "usage: ./bootstrap translation-import <site> <csv>"
+  [ -n "$csv" ] || die "usage: ./bootstrap translation-import <site> <csv>"
+  [ -f "$csv" ] || die "fichier CSV introuvable: $csv"
+
+  local remote="/tmp/translation-import.csv"
+  compose_stack cp "$csv" "backend:${remote}"
+  log "translation-import site=${site} csv=${csv}"
+  compose_stack exec backend bench --site "$site" execute \
+    boutique_custom.setup.translation_import.run --kwargs "{\"csv_path\": \"${remote}\"}"
+}
+
 main() {
   local cmd="${1:-help}"
   shift || true
@@ -354,6 +448,9 @@ main() {
     export-fixtures) cmd_export_fixtures "$@" ;;
     migrate) cmd_migrate "$@" ;;
     backup) cmd_backup "$@" ;;
+    setup-boutique) cmd_setup_boutique "$@" ;;
+    translation-audit) cmd_translation_audit "$@" ;;
+    translation-import) cmd_translation_import "$@" ;;
     shell) cmd_shell "$@" ;;
     exec) cmd_exec "$@" ;;
     help|-h|--help) print_help ;;
