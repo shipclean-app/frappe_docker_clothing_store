@@ -1,3 +1,6 @@
+# Bootstrap workflow runtime state
+.bootstrap/
+
 # Environment Variables
 .env
 custom.env

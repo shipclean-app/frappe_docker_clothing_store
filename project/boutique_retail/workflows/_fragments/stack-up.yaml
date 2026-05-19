@@ -1,0 +1,22 @@
+# Demarre / recree la stack et verifie que l'image contient boutique_custom.setup.
+steps:
+  - id: restart
+    type: command
+    command: restart
+
+  - id: wait_stack
+    type: wait
+    wait: stack_running
+    timeout: 240
+    interval: 5
+
+  - id: wait_http
+    type: wait
+    wait: http_ready
+    timeout: 360
+    interval: 5
+
+  - id: verify_module
+    type: verify
+    verify:
+      - module_importable

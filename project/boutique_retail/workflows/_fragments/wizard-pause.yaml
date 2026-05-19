@@ -1,0 +1,16 @@
+steps:
+  - id: wizard
+    type: pause
+    title: Setup wizard ERPNext
+    url: "${base_url}"
+    skip_if_setup_complete: true
+    checklist:
+      - "Langue Francais"
+      - "Nom de societe reel (pas un nom demo)"
+      - "Pays France, devise EUR, plan comptable SYSCOHADA"
+      - "NE PAS cocher les donnees de demonstration"
+      - "Un seul onglet, pas de double clic (evite deadlocks)"
+    verify_after:
+      id: setup_complete
+      retries: 3
+      delay_seconds: 5

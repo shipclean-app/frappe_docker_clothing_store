@@ -1,0 +1,15 @@
+name: post-wizard-setup
+description: Config boutique post-wizard (sans wipe ni site-create) — tests sur site existant
+limits:
+  - Ne supprime pas les donnees du site
+  - Taxes et relecture CSV restent manuelles (pauses)
+variables:
+  site: "${BOOTSTRAP_SITE:-boutique.local}"
+  admin_password: "${BOOTSTRAP_ADMIN_PASSWORD:-admin}"
+  warehouse: "Boutique"
+  base_url: "http://localhost:${HTTP_PUBLISH_PORT:-8080}"
+  pos_url: "http://localhost:${HTTP_PUBLISH_PORT:-8080}/app/point-of-sale"
+includes:
+  - _fragments/wizard-pause.yaml
+  - _fragments/post-wizard.yaml
+  - _fragments/translations.yaml

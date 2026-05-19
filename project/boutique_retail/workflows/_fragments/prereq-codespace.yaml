@@ -1,0 +1,12 @@
+# Prérequis affichés avant reconstruction Codespace (pas d'automation git/codespace).
+steps:
+  - id: prereq_codespace
+    type: pause
+    title: Prerequis environnement
+    url: "${base_url}"
+    checklist:
+      - "Depot frappe_docker_clothing_store clone"
+      - "apps.json pointe vers boutique_custom (branche develop)"
+      - "custom.env adapte (DB_PASSWORD, HTTP_PUBLISH_PORT, FRAPPE_SITE_NAME_HEADER)"
+      - "gh auth login OK ; unset GITHUB_TOKEN GH_TOKEN si push 403"
+      - "Commits pousses sur GitHub avant build si apps.json prives"

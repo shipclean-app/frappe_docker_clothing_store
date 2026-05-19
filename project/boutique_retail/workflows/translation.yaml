@@ -1,0 +1,10 @@
+name: translation
+description: Combo L — audit, relecture CSV, import, export fixtures
+limits:
+  - Relecture CSV humaine obligatoire (pause)
+  - import saute avec avertissement si --translation-csv absent
+variables:
+  site: "${BOOTSTRAP_SITE:-boutique.local}"
+  base_url: "http://localhost:${HTTP_PUBLISH_PORT:-8080}"
+includes:
+  - _fragments/translations.yaml

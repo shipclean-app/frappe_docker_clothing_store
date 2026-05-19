@@ -62,17 +62,22 @@ Les commandes utiles sont:
 ./bootstrap translation-import <site> <csv>
 ./bootstrap shell
 ./bootstrap exec <commande...>
+
+# Workflows (parcours automatises — voir project/boutique_retail/workflows/)
+./bootstrap workflow list
+./bootstrap workflow run <name> [--yes] [--site ...] [--dry-run]
+./bootstrap workflow resume
 ```
 
 ## 2 bis. Parcours bootstrap par cas d'usage
 
 Chaque parcours est un **combo** de commandes dans l'ordre. Variables par defaut : site `boutique.local`, port `8080`, admin `admin`.
 
-| ID | Cas | Quand | Combo terminal | UI ERPNext |
-|----|-----|-------|----------------|------------|
-| A | Premiere installation | Clone neuf | `init` → editer `apps.json` / `custom.env` → `build` → `start` → `site-create` → `site-install-app` → `migrate` | Wizard FR, sans demo → `setup-boutique` |
-| B | Journee de travail | Stack prete | `start` → travail → `stop` (optionnel) | Desk / POS |
-| C | Reset complet | Repartir a zero | `backup`? → `wipe --yes` → `start` → `site-create` → `site-install-app` → `migrate` | Wizard → `setup-boutique` |
+| ID | Cas | Quand | Workflow (recommande) | Combo terminal manuel | UI ERPNext |
+|----|-----|-------|----------------------|----------------------|------------|
+| A | Premiere installation | Clone neuf | `workflow run codespace-init` | `init` → … → `migrate` | Wizard → `setup-boutique` |
+| B | Journee de travail | Stack prete | — | `start` → travail → `stop` | Desk / POS |
+| C | Reset complet | Repartir a zero | `workflow run reset-config --yes` | `backup`? → `wipe` → … | Wizard → `setup-boutique` |
 | D | Redemarrage stack | Crash / `.env` | `restart` ou `stop` + `start` | — |
 | E | Site existant | Volumes OK | `start` → `migrate` si besoin | Reprendre config |
 | F | MAJ app custom | Nouveau commit `boutique_custom` | `build` → `restart` → `site-install-app` → `migrate` | Verifier ecrans |
@@ -80,7 +85,8 @@ Chaque parcours est un **combo** de commandes dans l'ordre. Variables par defaut
 | H | Sauvegarde | Avant reset | `backup boutique.local` | — |
 | I | Depannage | Erreur migrate | `status` → `logs backend` → `migrate` → `restart` | — |
 | K | Catalogue test rapide | Apres wizard | `setup-boutique <site> --with-catalog` | `/app/point-of-sale` |
-| L | Traductions boutique | FR retail | `translation-audit` → relecture CSV → `translation-import` → `export-fixtures` | Desk FR |
+| L | Traductions boutique | FR retail | `workflow run translation` | `translation-audit` → … → `export-fixtures` | Desk FR |
+| W | Post-wizard seul | Site deja cree | `workflow run post-wizard-setup` | `setup-boutique` → taxes → POS | Desk / POS |
 
 `clean` supprime les conteneurs **sans** les volumes. `wipe --yes` supprime **aussi** la base et le site.
 

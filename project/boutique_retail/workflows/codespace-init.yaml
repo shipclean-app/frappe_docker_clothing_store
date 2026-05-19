@@ -1,0 +1,19 @@
+name: codespace-init
+description: Reconstruction complete depuis clone neuf (sans wipe)
+limits:
+  - Prerequis git/gh/codespace non automatises
+  - site-create saute si le site existe (sauf --force-recreate-site)
+variables:
+  site: "${BOOTSTRAP_SITE:-boutique.local}"
+  admin_password: "${BOOTSTRAP_ADMIN_PASSWORD:-admin}"
+  warehouse: "Boutique"
+  base_url: "http://localhost:${HTTP_PUBLISH_PORT:-8080}"
+  pos_url: "http://localhost:${HTTP_PUBLISH_PORT:-8080}/app/point-of-sale"
+includes:
+  - _fragments/prereq-codespace.yaml
+  - _fragments/init-build.yaml
+  - _fragments/stack-up.yaml
+  - _fragments/site-bootstrap.yaml
+  - _fragments/wizard-pause.yaml
+  - _fragments/post-wizard.yaml
+  - _fragments/translations.yaml

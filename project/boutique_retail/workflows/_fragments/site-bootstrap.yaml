@@ -1,0 +1,30 @@
+steps:
+  - id: site_create
+    type: command
+    command: site-create
+    args:
+      - "${site}"
+      - "${admin_password}"
+    skip_if_site_exists: true
+    verify:
+      - site_exists
+
+  - id: install_boutique_custom
+    type: command
+    command: site-install-app
+    args:
+      - "${site}"
+      - boutique_custom
+    verify:
+      - app_installed
+      - module_importable
+
+  - id: migrate
+    type: command
+    command: migrate
+    args:
+      - "${site}"
+    retry: 2
+    delay_seconds: 10
+    verify:
+      - migrate_no_lock

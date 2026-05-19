@@ -81,9 +81,12 @@ Ce clone sert au projet **boutique pret-a-porter** (ERPNext + app `boutique_cust
 
 | Parcours | Commande rapide |
 |----------|-----------------|
-| Premier install | Voir [guide de travail](project/boutique_retail/guide_de_travail.md) combo **A** |
+| Premier install | `./bootstrap workflow run codespace-init` |
+| Reset complet | `./bootstrap workflow run reset-config --yes` |
+| Post-wizard / config | `./bootstrap workflow run post-wizard-setup` |
+| Traductions | `./bootstrap workflow run translation` |
 | Quotidien | `./bootstrap start` |
-| Reset complet | combo **C** dans le guide |
+| Detail manuel | [`parcours_reset_config_traduction.md`](project/boutique_retail/parcours_reset_config_traduction.md) |
 
 Kit retail : [`project/boutique_retail/`](project/boutique_retail/).
 

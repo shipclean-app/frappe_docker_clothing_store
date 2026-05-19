@@ -1,0 +1,24 @@
+steps:
+  - id: setup_boutique
+    type: command
+    command: setup-boutique
+    verify:
+      - warehouse_exists
+      - pos_profile_exists
+
+  - id: pause_taxes
+    type: pause
+    title: Configuration taxes (manuel)
+    url: "${base_url}"
+    checklist:
+      - "Comptabilite → modele de taxes de vente (TVA France)"
+      - "Lier le modele au Profil point de vente (Boutique)"
+      - "Vente test : TVA correcte sur le ticket"
+
+  - id: pause_pos
+    type: pause
+    title: Test caisse POS
+    url: "${pos_url}"
+    checklist:
+      - "Menu Ventes → POS → POS"
+      - "Verifier vente test avec stock et paiements"

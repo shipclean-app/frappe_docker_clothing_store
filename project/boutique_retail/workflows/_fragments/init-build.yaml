@@ -1,0 +1,11 @@
+# Init + build image (sans demarrer la stack — verify module apres stack-up).
+steps:
+  - id: init
+    type: command
+    command: init
+
+  - id: build
+    type: command
+    command: build
+    skip_if_flag: skip_build
+    skip_if_verify: module_importable

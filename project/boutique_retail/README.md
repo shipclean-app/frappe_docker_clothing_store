@@ -13,10 +13,11 @@ Ce dossier transforme le cadrage en livrables directement utilisables pour une v
 ## Ordre d'utilisation
 
 1. Lire `guide_de_travail.md` (section **Parcours bootstrap** pour les combos A–L).
-2. Lire ce fichier et valider les decisions par defaut.
-3. Configurer le catalogue avec `catalogue_et_variantes.md`.
-4. Faire la recette avec `recette_terrain.md`.
-5. Preparer l'app `boutique_custom` et le deploiement avec `customisations_et_deploiement.md`.
+2. Pour un reset complet : [`parcours_reset_config_traduction.md`](parcours_reset_config_traduction.md) (wizard → `setup-boutique` → traductions).
+3. Lire ce fichier et valider les decisions par defaut.
+4. Configurer le catalogue avec `catalogue_et_variantes.md`.
+5. Faire la recette avec `recette_terrain.md`.
+6. Preparer l'app `boutique_custom` et le deploiement avec `customisations_et_deploiement.md`.
 
 ## Decisions par defaut recommandees
 

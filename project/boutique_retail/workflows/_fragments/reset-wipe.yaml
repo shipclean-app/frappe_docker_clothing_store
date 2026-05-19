@@ -1,0 +1,18 @@
+steps:
+  - id: backup
+    type: command
+    command: backup
+    args:
+      - "${site}"
+    skip_if_flag: skip_backup
+    skip_if_verify: site_not_exists
+
+  - id: wipe_confirm
+    type: confirm
+    message: "Confirmer wipe --yes (suppression volumes et base) ?"
+
+  - id: wipe
+    type: command
+    command: wipe
+    args:
+      - "--yes"

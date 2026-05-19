@@ -1,0 +1,20 @@
+name: reset-config
+description: Reset complet, wizard, config boutique, taxes, traductions (parcours integral)
+limits:
+  - wipe --yes supprime volumes et base
+  - Pas de git push ni creation Codespace automatique
+  - TVA et relecture CSV via pauses manuelles
+variables:
+  site: "${BOOTSTRAP_SITE:-boutique.local}"
+  admin_password: "${BOOTSTRAP_ADMIN_PASSWORD:-admin}"
+  warehouse: "Boutique"
+  base_url: "http://localhost:${HTTP_PUBLISH_PORT:-8080}"
+  pos_url: "http://localhost:${HTTP_PUBLISH_PORT:-8080}/app/point-of-sale"
+includes:
+  - _fragments/init-build.yaml
+  - _fragments/reset-wipe.yaml
+  - _fragments/stack-up.yaml
+  - _fragments/site-bootstrap.yaml
+  - _fragments/wizard-pause.yaml
+  - _fragments/post-wizard.yaml
+  - _fragments/translations.yaml

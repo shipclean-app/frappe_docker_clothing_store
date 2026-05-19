@@ -1,0 +1,43 @@
+steps:
+  - id: translation_audit
+    type: command
+    command: translation-audit
+    args:
+      - "--priority"
+      - retail
+    skip_if_flag: skip_translations
+
+  - id: pause_translation_review
+    type: pause
+    title: Relecture traductions CSV
+    skip_if_flag: skip_translations
+    checklist:
+      - "Ouvrir le rapport translation-gaps-retail-fr.csv"
+      - "Completer translated_text (voir glossaire_traduction_fr.md)"
+      - "Relancer avec --translation-csv <fichier-revu.csv> si pas encore fait"
+
+  - id: translation_import
+    type: command
+    command: translation-import
+    skip_if_flag: skip_translations
+
+  - id: clear_cache
+    type: command
+    command: exec
+    args:
+      - bash
+      - "-lc"
+      - "bench --site ${site} clear-cache"
+    skip_if_flag: skip_translations
+
+  - id: export_fixtures
+    type: command
+    command: export-fixtures
+    args:
+      - "${site}"
+    skip_if_flag: skip_translations
+
+  - id: translation_commit_note
+    type: note
+    skip_if_flag: skip_translations
+    message: "Commit/push boutique_custom (fixtures/translation.json) puis ./bootstrap build && ./bootstrap restart si fixtures changees"
