@@ -47,23 +47,77 @@ class Entry:
     status: str
 
 
-def parse_po(path: Path, app: str) -> list[dict]:
-    text = path.read_text(encoding="utf-8", errors="replace")
-    blocks = re.split(r"\n\n+", text)
-    entries = []
-    for block in blocks:
-        if "msgid " not in block:
+def unescape_po(s: str) -> str:
+    return (
+        s.replace("\\n", "\n")
+        .replace("\\t", "\t")
+        .replace("\\r", "\r")
+        .replace('\\"', '"')
+        .replace("\\\\", "\\")
+    )
+
+
+def parse_po_quoted_block(lines: list[str], start: int) -> tuple[str, int]:
+    """Read msgid/msgstr starting at lines[start]; return decoded text and next line index."""
+    line = lines[start].strip()
+    m = re.match(r"(msgid|msgstr)\s+(.*)", line)
+    if not m:
+        return "", start + 1
+    rest = m.group(2).strip()
+    parts: list[str] = []
+    if rest:
+        for quoted in re.findall(r'"((?:\\.|[^"\\])*)"', rest):
+            parts.append(unescape_po(quoted))
+    i = start + 1
+    while i < len(lines) and lines[i].startswith('"'):
+        for quoted in re.findall(r'"((?:\\.|[^"\\])*)"', lines[i].strip()):
+            parts.append(unescape_po(quoted))
+        i += 1
+    return "".join(parts), i
+
+
+def iter_po_entries(path: Path) -> list[dict]:
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    refs: list[str] = []
+    msgid = ""
+    msgstr = ""
+    entries: list[dict] = []
+
+    def flush() -> None:
+        nonlocal msgid, msgstr, refs
+        if msgid:
+            entries.append(
+                {
+                    "msgid": msgid,
+                    "msgstr": msgstr,
+                    "refs": " ".join(refs),
+                }
+            )
+        msgid = ""
+        msgstr = ""
+        refs = []
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("#:"):
+            refs.append(line[3:].strip())
+            i += 1
             continue
-        mid_m = re.search(r"^msgid\s+\"(.*)\"", block, re.M | re.S)
-        if not mid_m:
+        if line.startswith("msgid "):
+            if msgid:
+                flush()
+            msgid, i = parse_po_quoted_block(lines, i)
             continue
-        msgid = mid_m.group(1).replace("\\n", "\n")
-        if not msgid:
+        if line.startswith("msgstr "):
+            msgstr, i = parse_po_quoted_block(lines, i)
             continue
-        mstr_m = re.search(r"^msgstr\s+\"(.*)\"", block, re.M | re.S)
-        msgstr = mstr_m.group(1).replace("\\n", "\n") if mstr_m else ""
-        refs = " ".join(re.findall(r"^#:\s*(.+)$", block, re.M))
-        entries.append({"app": app, "msgid": msgid, "msgstr": msgstr, "refs": refs})
+        if not line.strip():
+            if msgid:
+                flush()
+        i += 1
+    if msgid:
+        flush()
     return entries
 
 
@@ -111,7 +165,7 @@ def main():
         if not path.is_file():
             print(f"skip missing: {path}")
             continue
-        for e in parse_po(path, app):
+        for e in iter_po_entries(path):
             prio = classify_priority(e["refs"])
             if prio not in allowed:
                 continue
@@ -120,7 +174,7 @@ def main():
                 continue
             rows.append(
                 Entry(
-                    app=e["app"],
+                    app=app,
                     source_text=e["msgid"],
                     translated_text=e["msgstr"],
                     refs=e["refs"],
@@ -131,7 +185,7 @@ def main():
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
+        w = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
         w.writerow(["app", "priority", "status", "source_text", "translated_text", "refs"])
         for r in sorted(rows, key=lambda x: (x.priority, x.app, x.source_text)):
             w.writerow([r.app, r.priority, r.status, r.source_text, r.translated_text, r.refs])
