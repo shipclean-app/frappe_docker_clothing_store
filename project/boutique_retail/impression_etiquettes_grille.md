@@ -8,10 +8,12 @@ ERPNext **ne propose pas nativement** une planche A4 avec plusieurs articles en 
 - Dépendance Python dans le bench :
 
 ```bash
-./bootstrap exec bash -lc 'cd /home/frappe/frappe-bench && ./env/bin/pip install python-barcode'
 ./bootstrap build
 ./bootstrap restart
+./bootstrap link-assets
 ```
+
+(`link-assets` lie les JS sur le conteneur **frontend** et installe `python-barcode` sur le **backend**.)
 
 ## Utilisation (recommandé)
 
@@ -53,11 +55,12 @@ La grille multi-articles nécessite un **template HTML dédié** + génération 
 
 | Problème | Cause / solution |
 |----------|------------------|
-| Bouton absent | `bench build` + `restart` après mise à jour `boutique_custom` |
+| Bouton absent | `./bootstrap build` → `restart` → `link-assets` après MAJ `boutique_custom` |
 | « Aucune variante avec code-barres » | Ouvrir la variante → **Codes-barres** vide → réenregistrer ou `autofill_barcodes` |
 | Modèle parent coché | Ignoré volontairement — cocher les **variantes** |
 | Scan échoue | Vérifier que l’étiquette imprimée encode la **même** valeur que **Codes-barres** |
 | `python-barcode` manquant | `bench pip install python-barcode` |
+| `only_for() takes ... 3 were given` | Mettre à jour `boutique_custom` (Frappe 16 : `only_for((rôles,))` en tuple) |
 
 ## Fichiers techniques
 

@@ -16,6 +16,10 @@ steps:
     timeout: 360
     interval: 5
 
+  - id: link_boutique_assets
+    type: command
+    command: link-assets
+
   - id: verify_module
     type: verify
     verify:

@@ -80,7 +80,7 @@ Chaque parcours est un **combo** de commandes dans l'ordre. Variables par defaut
 | C | Reset complet | Repartir a zero | `workflow run reset-config --yes` | `backup`? → `wipe` → … | Wizard → `setup-boutique` |
 | D | Redemarrage stack | Crash / `.env` | `restart` ou `stop` + `start` | — |
 | E | Site existant | Volumes OK | `start` → `migrate` si besoin | Reprendre config |
-| F | MAJ app custom | Nouveau commit `boutique_custom` | `build` → `restart` → `site-install-app` → `migrate` | Verifier ecrans |
+| F | MAJ app custom | Nouveau commit `boutique_custom` | `build` → `restart` → `link-assets` → `site-install-app` → `migrate` | Verifier ecrans / etiquettes PDF |
 | G | Export customisations | Lot UI valide | `export-fixtures` → commit `boutique_custom` → `build` → `restart` | — |
 | H | Sauvegarde | Avant reset | `backup boutique.local` | — |
 | I | Depannage | Erreur migrate | `status` → `logs backend` → `migrate` → `restart` | — |

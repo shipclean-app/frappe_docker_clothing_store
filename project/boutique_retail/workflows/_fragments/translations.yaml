@@ -40,4 +40,4 @@ steps:
   - id: translation_commit_note
     type: note
     skip_if_flag: skip_translations
-    message: "Commit/push boutique_custom (fixtures/translation.json) puis ./bootstrap build && ./bootstrap restart si fixtures changees"
+    message: "Commit/push boutique_custom puis ./bootstrap build && ./bootstrap restart && ./bootstrap link-assets si code ou fixtures changes"

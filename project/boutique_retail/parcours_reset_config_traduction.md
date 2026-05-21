@@ -56,6 +56,7 @@ Si vous venez de mettre à jour le dépôt `boutique_custom`, reconstruire l’i
 ```bash
 ./bootstrap build
 ./bootstrap restart
+./bootstrap link-assets
 ```
 
 Sans cette étape, après un `wipe`, l’ancienne image peut ne pas contenir les nouveaux scripts.
@@ -223,6 +224,7 @@ Si le code fixtures a changé :
 ```bash
 ./bootstrap build
 ./bootstrap restart
+./bootstrap link-assets
 ```
 
 ---
@@ -235,7 +237,7 @@ Si le code fixtures a changé :
 
 [Manuel — équivalent]
 [Prérequis]
-  ./bootstrap build && ./bootstrap restart   # si boutique_custom a changé
+  ./bootstrap build && ./bootstrap restart && ./bootstrap link-assets   # si boutique_custom a changé
 
 [Reset + wizard]
   ./bootstrap backup boutique.local          # optionnel

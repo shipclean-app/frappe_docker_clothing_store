@@ -153,6 +153,7 @@ Commandes principales:
   start                    Demarre la stack ERPNext
   stop                     Arrete proprement les conteneurs
   restart                  Redemarre la stack
+  link-assets [site]       Lie les assets boutique_custom (frontend) + python-barcode
   status                   Affiche l'etat des conteneurs
   logs [service]           Suit les logs
   clean                    Supprime conteneurs, reseau et orphelins
@@ -228,6 +229,24 @@ cmd_stop() {
 cmd_restart() {
   cmd_stop
   cmd_start
+}
+
+cmd_link_assets() {
+  ensure_env_file
+  load_env
+  local site="${1:-${BOOTSTRAP_SITE:-boutique.local}}"
+
+  log "Liaison assets boutique_custom sur frontend (nginx)..."
+  compose_stack exec -T frontend bash -lc \
+    'cd /home/frappe/frappe-bench && bench build --app boutique_custom' 2>/dev/null || true
+
+  log "Dependance python-barcode dans le bench (backend)..."
+  compose_stack exec -T backend bash -lc \
+    'cd /home/frappe/frappe-bench && ./env/bin/pip install -q python-barcode' 2>/dev/null || true
+
+  log "Vidage cache site ${site}..."
+  compose_stack exec -T backend bench --site "$site" clear-cache 2>/dev/null || true
+  log "link-assets termine (bouton Etiquettes grille PDF + PDF code-barres)."
 }
 
 cmd_status() {
@@ -449,6 +468,7 @@ main() {
     start) cmd_start "$@" ;;
     stop) cmd_stop "$@" ;;
     restart) cmd_restart "$@" ;;
+    link-assets) cmd_link_assets "$@" ;;
     status) cmd_status "$@" ;;
     logs) cmd_logs "$@" ;;
     clean) cmd_clean "$@" ;;
