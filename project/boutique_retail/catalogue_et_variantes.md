@@ -68,7 +68,32 @@ Pourquoi:
 - evite les erreurs de taille/couleur
 - simplifie le POS et l'inventaire
 
-Si la boutique n'utilise pas encore de scan, garder quand meme le champ disponible pour la phase suivante.
+### Remplissage automatique (`boutique_custom`)
+
+A chaque **enregistrement** d'un article **sans variante enfant** (variante ou article simple, pas le modele parent) :
+
+- si la table **Codes-barres** est vide, le systeme ajoute une ligne :
+  - **Code-barres** = `Code article` (SKU), ex. `ROB-ALBA-M-Noir`
+  - **Type** laisse vide (evite l'erreur ERPNext sur CODE-39 si le SKU a des minuscules)
+- vous pouvez ensuite choisir un **type** (CODE-39, EAN, etc.) apres avoir normalise le code si besoin
+- si un code-barres est deja renseigne (saisie ou import), **rien n'est ecrase** : modification manuelle possible a tout moment
+
+Modele parent (`A des variantes` coche) : pas de code auto (les codes sont sur chaque variante).
+
+Retour arriere sur le parc existant :
+
+```bash
+./bootstrap exec backend bench --site boutique.local execute \
+  boutique_custom.setup.autofill_barcodes.run
+```
+
+Option simulation : `--kwargs '{"dry_run": true}'`
+
+### Impression planche PDF (grille)
+
+Plusieurs variantes sur une feuille A4 (image + nom + code-barres CODE128) : voir [`impression_etiquettes_grille.md`](impression_etiquettes_grille.md).
+
+**[MENU]** **Stock** → **Article** → cocher les variantes → bouton **Etiquettes grille PDF**.
 
 ## Champs article autorises en phase 1
 
